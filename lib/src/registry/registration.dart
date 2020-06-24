@@ -7,6 +7,7 @@ import 'package:pointycastle/block/aes_fast.dart';
 import 'package:pointycastle/block/modes/cbc.dart';
 import 'package:pointycastle/block/modes/cfb.dart';
 import 'package:pointycastle/block/modes/ctr.dart';
+import 'package:pointycastle/block/modes/eax.dart';
 import 'package:pointycastle/block/modes/ecb.dart';
 import 'package:pointycastle/block/modes/gctr.dart';
 import 'package:pointycastle/block/modes/ofb.dart';
@@ -129,6 +130,7 @@ void _registerBlockCiphers(FactoryRegistry registry) {
   registry.register(OFBBlockCipher.FACTORY_CONFIG);
   registry.register(SICBlockCipher.FACTORY_CONFIG);
   registry.register(GCMBlockCipher.FACTORY_CONFIG);
+  registry.register(EAXBlockCipher.FACTORY_CONFIG);
 }
 
 void _registerDigests(FactoryRegistry registry) {

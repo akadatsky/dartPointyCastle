@@ -4,7 +4,6 @@ library impl.block_cipher.modes.ctr;
 
 import "package:pointycastle/api.dart";
 import "package:pointycastle/adapters/stream_cipher_as_block_cipher.dart";
-import "package:pointycastle/stream/ctr.dart";
 import "package:pointycastle/src/registry/registry.dart";
 
 class CTRBlockCipher extends StreamCipherAsBlockCipher {
@@ -15,9 +14,9 @@ class CTRBlockCipher extends StreamCipherAsBlockCipher {
       (_, final Match match) => () {
             BlockCipher underlying = new BlockCipher(match.group(1));
             return new CTRBlockCipher(
-                underlying.blockSize, new CTRStreamCipher(underlying));
+                underlying.blockSize, new CTRBlockCipher(underlying.blockSize, underlying));
           });
 
-  CTRBlockCipher(int blockSize, StreamCipher underlyingCipher)
+  CTRBlockCipher(int blockSize, BlockCipher underlyingCipher)
       : super(blockSize, underlyingCipher);
 }

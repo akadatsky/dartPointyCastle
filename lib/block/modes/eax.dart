@@ -5,6 +5,7 @@ import 'package:pointycastle/api.dart';
 import 'package:pointycastle/block/modes/sic.dart';
 import 'package:pointycastle/macs/cmac.dart';
 import 'package:pointycastle/src/registry/registry.dart';
+import 'package:pointycastle/stream/sic.dart';
 
 class EAXBlockCipher implements AEADBlockCipher {
   // ignore: non_constant_identifier_names
@@ -20,7 +21,8 @@ class EAXBlockCipher implements AEADBlockCipher {
 
   EAXBlockCipher(BlockCipher underlyingCipher) {
     _mac = CMac(underlyingCipher, underlyingCipher.blockSize * 8);
-    _cipher = SICBlockCipher(underlyingCipher.blockSize, underlyingCipher);
+    _cipher = SICBlockCipher(underlyingCipher.blockSize, SICStreamCipher(underlyingCipher));
+    _nonceMac = Uint8List(_mac.macSize);
   }
 
   static const nTAG = 0x0;
@@ -42,6 +44,7 @@ class EAXBlockCipher implements AEADBlockCipher {
 
   Uint8List _macBlock;
   Mac _mac;
+  Uint8List _nonceMac;
 
   @override
   String get algorithmName => '${underlyingCipher.algorithmName}/EAX';
@@ -66,6 +69,8 @@ class EAXBlockCipher implements AEADBlockCipher {
 
   /// The length in bytes of the authentication tag
   int get macSize => _macSize;
+
+  Uint8List get nonceMac => _nonceMac;
 
   /// The value of the authentication tag associated with the last processed
   /// data
@@ -165,6 +170,14 @@ class EAXBlockCipher implements AEADBlockCipher {
 
     // Key reuse implemented in CBC mode of underlying CMac
     _mac.init(keyParam);
+
+    var tag = Uint8List(blockSize);
+    tag[blockSize - 1] = nTAG;
+    _mac.update(tag, 0, blockSize);
+    _mac.update(newNonce, 0, newNonce.length);
+    _mac.doFinal(nonceMac, 0);
+
+    _cipher.init(forEncryption, ParametersWithIV(keyParam, nonceMac));
 
     var bufLength = forEncryption ? blockSize : (blockSize + _macSize);
     _bufBlock = Uint8List(bufLength);

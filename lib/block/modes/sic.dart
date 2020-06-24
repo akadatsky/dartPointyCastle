@@ -18,9 +18,9 @@ class SICBlockCipher extends StreamCipherAsBlockCipher {
       (_, final Match match) => () {
             BlockCipher underlying = new BlockCipher(match.group(1));
             return new SICBlockCipher(
-                underlying.blockSize, new SICBlockCipher(underlying.blockSize, underlying));
+                underlying.blockSize, new SICStreamCipher(underlying));
           });
 
-  SICBlockCipher(int blockSize, BlockCipher underlyingCipher)
+  SICBlockCipher(int blockSize, StreamCipher underlyingCipher)
       : super(blockSize, underlyingCipher);
 }

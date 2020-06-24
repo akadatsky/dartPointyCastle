@@ -24,7 +24,7 @@ class EAXBlockCipher implements AEADBlockCipher {
     _cipher = SICBlockCipher(underlyingCipher.blockSize, SICStreamCipher(underlyingCipher));
     _nonceMac = Uint8List(_mac.macSize);
     _macBlock = Uint8List(underlyingCipher.blockSize);
-    associatedTextMac = Uint8List(_mac.macSize);
+    _associatedTextMac = Uint8List(_mac.macSize);
   }
 
   static const nTAG = 0x0;
@@ -47,8 +47,8 @@ class EAXBlockCipher implements AEADBlockCipher {
   Uint8List _macBlock;
   Mac _mac;
   Uint8List _nonceMac;
-  Uint8List associatedTextMac;
-  bool cipherInitialized = false;
+  Uint8List _associatedTextMac;
+  bool _cipherInitialized = false;
 
   @override
   String get algorithmName => '${underlyingCipher.algorithmName}/EAX';
@@ -121,7 +121,7 @@ class EAXBlockCipher implements AEADBlockCipher {
     var outC = Uint8List(blockSize);
     _mac.doFinal(outC, 0);
     for (var i = 0; i < _macBlock.length; i++) {
-      _macBlock[i] = nonceMac[i] ^ associatedTextMac[i] ^ outC[i];
+      _macBlock[i] = nonceMac[i] ^ _associatedTextMac[i] ^ outC[i];
     }
   }
 
@@ -319,12 +319,12 @@ class EAXBlockCipher implements AEADBlockCipher {
   int _getOutputSize(int length) => (length + (forEncryption ? macSize : -macSize) + blockSize - 1) ~/ blockSize * blockSize;
 
   void _initCipher() {
-    if (cipherInitialized) {
+    if (_cipherInitialized) {
       return;
     }
 
-    cipherInitialized = true;
-    _mac.doFinal(associatedTextMac, 0);
+    _cipherInitialized = true;
+    _mac.doFinal(_associatedTextMac, 0);
     var tag = Uint8List(blockSize);
     tag[blockSize - 1] = cTAG;
     _mac.update(tag, 0, blockSize);

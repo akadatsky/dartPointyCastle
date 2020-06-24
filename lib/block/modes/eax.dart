@@ -23,6 +23,8 @@ class EAXBlockCipher implements AEADBlockCipher {
     _mac = CMac(underlyingCipher, underlyingCipher.blockSize * 8);
     _cipher = SICBlockCipher(underlyingCipher.blockSize, SICStreamCipher(underlyingCipher));
     _nonceMac = Uint8List(_mac.macSize);
+    _macBlock = Uint8List(underlyingCipher.blockSize);
+    associatedTextMac = Uint8List(_mac.macSize);
   }
 
   static const nTAG = 0x0;
@@ -45,6 +47,8 @@ class EAXBlockCipher implements AEADBlockCipher {
   Uint8List _macBlock;
   Mac _mac;
   Uint8List _nonceMac;
+  Uint8List associatedTextMac;
+  bool cipherInitialized = false;
 
   @override
   String get algorithmName => '${underlyingCipher.algorithmName}/EAX';
@@ -84,14 +88,14 @@ class EAXBlockCipher implements AEADBlockCipher {
   int processBlock(Uint8List inp, int inpOff, Uint8List out, int outOff) {
     // TODO
     // Not called
-    print('processBlock');
     return null;
   }
 
   @override
   int doFinal(Uint8List out, int outOff) {
     // TODO
-    int extra = _bufOff;
+    _initCipher();
+    var extra = _bufOff;
     var tmp = Uint8List(_bufBlock.length);
     _bufOff = 0;
 
@@ -100,18 +104,25 @@ class EAXBlockCipher implements AEADBlockCipher {
         throw InvalidCipherTextException('Output buffer too short');
       }
       _cipher.processBlock(_bufBlock, 0, tmp, 0);
-      // tmp should be on this point:
-      // [29, -85, 11, -47, -117, -70, -88, 67, 1, -125, 6, -42, 29, -94, -12, 4]
-      // but it show:
-      // [44, 230, 146, 127, 21, 198, 5, 99, 219, 192, 197, 254, 38, 237, 168, 35]
 
-      out.setAll(outOff, tmp);
+      out.setRange(outOff, extra, tmp);
       _mac.update(tmp, 0, extra);
+      _calculateMac();
+      reset();
+      out.setAll(outOff + extra, _macBlock);
+      return extra + macSize;
     } else {
       // TODO
+      return 0;
     }
+  }
 
-    return null;
+  void _calculateMac() {
+    var outC = Uint8List(blockSize);
+    _mac.doFinal(outC, 0);
+    for (var i = 0; i < _macBlock.length; i++) {
+      _macBlock[i] = nonceMac[i] ^ associatedTextMac[i] ^ outC[i];
+    }
   }
 
   /// When decrypting, validates the generated authentication tag with the one
@@ -306,4 +317,16 @@ class EAXBlockCipher implements AEADBlockCipher {
   }
 
   int _getOutputSize(int length) => (length + (forEncryption ? macSize : -macSize) + blockSize - 1) ~/ blockSize * blockSize;
+
+  void _initCipher() {
+    if (cipherInitialized) {
+      return;
+    }
+
+    cipherInitialized = true;
+    _mac.doFinal(associatedTextMac, 0);
+    var tag = Uint8List(blockSize);
+    tag[blockSize - 1] = cTAG;
+    _mac.update(tag, 0, blockSize);
+  }
 }

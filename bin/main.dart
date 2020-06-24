@@ -16,7 +16,7 @@ void main(List<String> arguments) {
   cipher.init(true, AEADParameters(key, 128, nonce, header));
 
   var result = Uint8List(20);
-  int olen = cipher.processBytes(data, 0, data.length, result, 0);
+  var olen = cipher.processBytes(data, 0, data.length, result, 0);
   cipher.doFinal(result, olen);
 
   print('actual: ${Int8List.fromList(result)}');
